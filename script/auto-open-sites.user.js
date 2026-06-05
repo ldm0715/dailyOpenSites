@@ -4,6 +4,7 @@
 // @version      1.0
 // @description  每天第一次打开浏览器时自动打开指定网站，并提供手动打开和网站管理界面
 // @author       gcnanmu
+// @license      MIT
 // @match        *://*/*
 // @grant        GM_getValue
 // @grant        GM_setValue

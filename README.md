@@ -1,4 +1,7 @@
 # 每日自动打开网站
+<div align="center">
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/icon.png" alt="alt text" style="zoom: 15%;" />
+</div>
 
 一个 Tampermonkey 用户脚本：每天首次访问网页时，自动打开你配置的一组常用网站，并提供可视化界面管理这些网站。
 
@@ -8,24 +11,33 @@
 
 主要功能（自动）：每天首次访问网页时自动打开启用的网站（当天只触发一次，可重置）。
 
-![功能](./static/功能.png)
+<div align="center">
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/functions.png" alt="alt text" style="zoom: 15%;" />
+</div>
 
 1. 立即打开所有网站：通过菜单一键打开所有启用网站。
 2. 控制面板：单独打开网站、用开关即时启用/禁用。
-   ![alt text](static/控制面板.png)
+   <div align="center">
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/panel.png" alt="alt text" style="zoom: 15%;" />
+</div>
 3. 管理面板：新增、编辑、删除网站，拖拽排序。
-   ![alt text](static/管理网站.png)
+   <div align="center">
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/management.png" alt="alt text" style="zoom: 15%;" />
+</div>
 4. 重置今日记录：可重置当天记录，重新触发自动打开。
 
 ## 安装
 
-1. 安装浏览器扩展 [Tampermonkey](https://www.tampermonkey.net/)。
-2. 在 Tampermonkey 中新建脚本，把 [`script/auto-open-sites.user.js`](script/auto-open-sites.user.js) 的内容粘贴进去并保存。
-   - 若已托管在 GitHub，也可打开该文件的 Raw 链接，由 Tampermonkey 自动识别安装。
+1. 安装插件：扩展 [Tampermonkey](https://www.tampermonkey.net/)
+2. 安装脚本（二选一）：
+   - 在 Tampermonkey 中新建脚本，把 [`script/auto-open-sites.user.js`](script/auto-open-sites.user.js) 的内容粘贴进去并保存
+   - 访问[每日自动打开网站](https://greasyfork.org/zh-CN/scripts/581225-每日自动打开网站)，点击安装
 
 ## 使用
 
-安装后打开任意网页，脚本会自动执行当天的打开检查。通过 Tampermonkey 菜单进行操作：
+安装后打开任意网页，脚本会自动执行当天的打开检查。
+
+更多操作可以通过 Tampermonkey 菜单进行：
 
 | 菜单项 | 作用 |
 | --- | --- |
