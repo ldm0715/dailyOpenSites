@@ -4,8 +4,8 @@
 </div>
 
 <div align="center">
-<a href="https://greasyfork.org/zh-CN/scripts/581225-每日自动打开网站"><img alt="Tampermonkey" src="https://img.shields.io/badge/Tampermonkey-v5.5.0-orange?logo=tampermonkey"></a>
-<a href="https://greasyfork.org/zh-CN/scripts/581225-每日自动打开网站"><img alt="Greasy Fork Version" src="https://img.shields.io/greasyfork/v/581225?label=version&color=green"></a>
+<a href="https://greasyfork.org/zh-CN/scripts/581225-dailyopensites"><img alt="Tampermonkey" src="https://img.shields.io/badge/Tampermonkey-v5.5.0-orange?logo=tampermonkey"></a>
+<a href="https://greasyfork.org/zh-CN/scripts/581225-dailyopensites"><img alt="Greasy Fork Version" src="https://img.shields.io/greasyfork/v/581225?label=version&color=green"></a>
 <img alt="License" src="https://img.shields.io/greasyfork/l/581225?label=license&color=blue">
 </div>
 
@@ -37,7 +37,7 @@
 1. 安装插件：扩展 [Tampermonkey](https://www.tampermonkey.net/)
 2. 安装脚本（二选一）：
    - 在 Tampermonkey 中新建脚本，把 [`script/auto-open-sites.user.js`](script/auto-open-sites.user.js) 的内容粘贴进去并保存
-   - 访问[每日自动打开网站](https://greasyfork.org/zh-CN/scripts/581225-每日自动打开网站)，点击安装
+   - 访问[每日自动打开网站](https://greasyfork.org/zh-CN/scripts/581225-dailyopensites)，点击安装
 
 ## 使用
 
