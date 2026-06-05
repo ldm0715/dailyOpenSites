@@ -1,6 +1,12 @@
 # 每日自动打开网站
 <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/icon.png" alt="alt text" style="zoom: 15%;" />
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/icon.png" alt="icon" width="10%" />
+</div>
+
+<div align="center">
+<a href="https://greasyfork.org/zh-CN/scripts/581225-每日自动打开网站"><img alt="Tampermonkey" src="https://img.shields.io/badge/Tampermonkey-v5.5.0-orange?logo=tampermonkey"></a>
+<a href="https://greasyfork.org/zh-CN/scripts/581225-每日自动打开网站"><img alt="Greasy Fork Version" src="https://img.shields.io/greasyfork/v/581225?label=version&color=green"></a>
+<img alt="License" src="https://img.shields.io/greasyfork/l/581225?label=license&color=blue">
 </div>
 
 一个 Tampermonkey 用户脚本：每天首次访问网页时，自动打开你配置的一组常用网站，并提供可视化界面管理这些网站。
@@ -12,18 +18,18 @@
 主要功能（自动）：每天首次访问网页时自动打开启用的网站（当天只触发一次，可重置）。
 
 <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/functions.png" alt="alt text" style="zoom: 15%;" />
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/functions.png" alt="functions" width="15%" />
 </div>
 
 1. 立即打开所有网站：通过菜单一键打开所有启用网站。
 2. 控制面板：单独打开网站、用开关即时启用/禁用。
    <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/panel.png" alt="alt text" style="zoom: 15%;" />
-</div>
+      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/panel.png" alt="panel" width="15%" />
+   </div>
 3. 管理面板：新增、编辑、删除网站，拖拽排序。
    <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/management.png" alt="alt text" style="zoom: 15%;" />
-</div>
+      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/management.png" alt="management" width="15%" />
+   </div>
 4. 重置今日记录：可重置当天记录，重新触发自动打开。
 
 ## 安装
@@ -57,10 +63,14 @@
 
 ## 常见问题
 
-- **没有自动打开？** 确认至少有一个网站已启用、URL 合法、今天尚未打开过；刚手动打开过有 10 秒防重复窗口；浏览器可能拦截了批量打开标签页。
-- **重置后仍未触发？** 确认有启用的网站，且目标页面确实加载了脚本。
-- **每日判断与本地日期有偏差？** 当前用 UTC 日期（`toISOString`），东八区凌晨可能差一天。
-- **查看日志：** 打开浏览器控制台，脚本会输出 `[每日自动打开网站]: ...` 日志。
+- **没有自动打开？** 
+确认至少有一个网站已启用、URL 合法、今天尚未打开过；刚手动打开过有 10 秒防重复窗口；浏览器可能拦截了批量打开标签页。
+- **重置后仍未触发？** 
+确认有启用的网站，且目标页面确实加载了脚本。
+- **每日判断与本地日期有偏差？** 
+当前用 UTC 日期（`toISOString`），东八区凌晨可能差一天。
+- **查看日志：** 
+打开浏览器控制台，脚本会输出 `[每日自动打开网站]: ...` 日志。
 
 ## 开发
 
