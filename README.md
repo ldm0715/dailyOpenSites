@@ -18,17 +18,17 @@
 主要功能（自动）：每天首次访问网页时自动打开启用的网站（当天只触发一次，可重置）。
 
 <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/functions.png" alt="functions" width="15%" />
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/functions.png" alt="functions" width="45%" />
 </div>
 
 1. 立即打开所有网站：通过菜单一键打开所有启用网站。
 2. 控制面板：单独打开网站、用开关即时启用/禁用。
    <div align="center">
-      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/panel.png" alt="panel" width="15%" />
+      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/panel.png" alt="panel" width="45%" />
    </div>
 3. 管理面板：新增、编辑、删除网站，拖拽排序。
    <div align="center">
-      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/management.png" alt="management" width="15%" />
+      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/management.png" alt="management" width="45%" />
    </div>
 4. 重置今日记录：可重置当天记录，重新触发自动打开。
 
