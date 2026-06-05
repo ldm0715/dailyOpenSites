@@ -1,6 +1,6 @@
 # 每日自动打开网站
 <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/icon.png" alt="icon" width="10%" />
+<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/icon.png" alt="icon" width="20%" />
 </div>
 
 <div align="center">
