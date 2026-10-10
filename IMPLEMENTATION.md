@@ -262,9 +262,7 @@ Tampermonkey 存储没有编译期类型约束。用户可能升级脚本、导�
 
 ```js
 if (lastOpenDate !== today) {
-    if (openAllSites({ silentEmpty: true })) {
-        GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, today);
-    }
+    openAllSites({ silentEmpty: true });
     return;
 }
 ```
@@ -275,9 +273,18 @@ if (lastOpenDate !== today) {
 const sites = getSites().filter((site) => site.enabled);
 ```
 
+`lastOpenDate` 的写入集中在 `openAllSites()` 内，手动打开和每日自动打开共用同一份记录：
+
+```js
+GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, Date.now());
+GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
+```
+
 **为什么这样设计**
 
-当前实现只有在 `openAllSites()` 确实安排了打开标签页时，才写入 `lastOpenDate`。如果网站列表为空，或者没有任何启用网站，则不会算作今日已触发。
+只有在 `openAllSites()` 确实安排了打开标签页时，才写入 `lastOpenDate`。如果网站列表为空，或者没有任何启用网站，则不会算作今日已触发。
+
+把写入放在 `openAllSites()` 而不是 `checkAndAutoOpen()` 里，是因为“立即打开所有网站”菜单和控制面板的“打开所有网站”按钮也调用同一个函数。如果这两处不计入今日记录，用户上午手动打开一次，下午访问新页面时脚本仍会再自动打开一遍。
 
 列表为空时会输出：
 
@@ -299,6 +306,7 @@ const sites = getSites().filter((site) => site.enabled);
 - 同一天再次访问页面不应重复打开。
 - 禁用网站不应被 `openAllSites()` 打开。
 - 保存空网站列表后访问页面，应只打印“当前网站列表为空，不触发自动打开逻辑”，且不写入 `lastOpenDate`。
+- 点击“立即打开所有网站”后，当天访问新页面不应再自动打开。
 
 ### 4.5 防重复触发模块
 
@@ -306,7 +314,7 @@ const sites = getSites().filter((site) => site.enabled);
 
 | 状态 | 存储位置 | 作用 |
 | --- | --- | --- |
-| `lastOpenDate` | Tampermonkey 存储 | 控制今天是否已经自动打开过 |
+| `lastOpenDate` | Tampermonkey 存储 | 控制今天是否已经打开过（手动或自动） |
 | `lastManualOpen` | Tampermonkey 存储 | 控制刚由脚本打开的新标签页不再重复触发 |
 | `autoOpenChecked` | `sessionStorage` | 控制当前标签页只检查一次 |
 
@@ -657,6 +665,8 @@ GM_registerMenuCommand('重置今日记录', () => {
 
 Tampermonkey 菜单不会污染目标网页 UI，也不需要在每个页面插入固定按钮。需要 DOM 的命令通过 `ensureBodyReady()` 执行，不依赖 DOM 的命令直接执行。
 
+“立即打开所有网站”复用 `openAllSites()`，因此同样会写入 `lastOpenDate`，点击后当天不会再被自动打开。
+
 ## 5. 稳定性与正确性保障
 
 ### 5.1 参数校验
@@ -873,6 +883,23 @@ sessionStorage.removeItem('autoOpenChecked');
 
 新增 `saveSingleSite()` / `deleteSiteByKey()` / `persistOrder()`，为每行提供独立“保存”按钮、删除即时持久化、拖拽排序即时持久化。每行用 `data-site-key`（URL 小写）在存储中定位自身，做 upsert；底部“保存配置”保留用于批量提交。
 
+### 6.10 手动打开后当天仍会被自动打开
+
+**问题**
+
+早期只有 `checkAndAutoOpen()` 写入 `lastOpenDate`，`openAllSites()` 不写。用户点击“立即打开所有网站”或控制面板的“打开所有网站”后，`lastOpenDate` 仍是旧值，当天访问新页面时脚本会再自动打开一遍。
+
+**解决**
+
+把 `lastOpenDate` 的写入移进 `openAllSites()`，紧跟在 `lastManualOpen` 之后，手动打开和自动打开共用同一份今日记录：
+
+```js
+GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, Date.now());
+GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
+```
+
+两个提前返回（列表为空、没有启用网站）仍在写入之前，所以“空列表不算今日已触发”的语义不变。
+
 ## 7. 总结与后续优化
 
 当前项目是一个轻量 Tampermonkey 自动打开网站脚本。实现上保持单文件运行、无构建依赖，通过原生 DOM 实现控制面板和管理面板，通过 Tampermonkey 存储保存网站配置。
@@ -881,7 +908,7 @@ sessionStorage.removeItem('autoOpenChecked');
 
 - 每日自动打开。
 - 仅在顶层页面运行（`@noframes`），避免 iframe 重复触发。
-- 手动打开所有启用网站。
+- 手动打开所有启用网站，且计入今日记录，当天不会再被自动打开。
 - 控制面板快速打开和即时启用/禁用。
 - 管理面板新增、修改、删除、启用/禁用、拖拽排序。
 - 每行独立保存与删除即时持久化，拖拽排序即时持久化，底部“保存配置”批量提交。

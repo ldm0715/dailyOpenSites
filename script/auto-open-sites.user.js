@@ -115,6 +115,9 @@
      * - 每个标签页间隔 500ms，降低浏览器把它当作批量弹窗拦截的概率。
      * - 第一个标签页 active，后续标签页后台插入。
      *
+     * 这里同时写入 lastOpenDate：手动打开和每日自动打开共用同一份“今日已打开”记录。
+     * 否则用户先手动打开一次，当天稍后访问新页面时仍会再自动打开一遍。
+     *
      * @param {{silentEmpty?: boolean}} options
      * @returns {boolean} true 表示确实安排了打开标签页；false 表示没有触发打开
      */
@@ -141,6 +144,8 @@
 
         // 标记刚刚由脚本主动打开过网站，避免新标签页短时间内再次触发自动打开。
         GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, Date.now());
+        // 记录今天已经打开过，手动打开同样计入，避免当天再次被自动打开。
+        GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
 
         sites.forEach((site, index) => {
             setTimeout(() => {
@@ -159,8 +164,8 @@
      * 2. 和今天日期比较。
      * 3. 如果今天还没有打开过，调用 openAllSites()。
      *
-     * 只有真正安排打开标签页时，才写入 lastOpenDate。
-     * 如果网站列表为空，或者没有任何启用网站，则不算作今日已触发。
+     * lastOpenDate 的写入统一放在 openAllSites() 里，只有真正安排打开标签页时才写。
+     * 如果网站列表为空，或者没有任何启用网站，则不算作今日已触发，
      * 这样用户添加网站后仍能在当天重新触发自动打开逻辑。
      */
     function checkAndAutoOpen() {
@@ -169,9 +174,7 @@
 
         if (lastOpenDate !== today) {
             console.log('[每日自动打开] 检测到今天首次打开浏览器，正在打开网站...');
-            if (openAllSites({ silentEmpty: true })) {
-                GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, today);
-            }
+            openAllSites({ silentEmpty: true });
             return;
         }
 

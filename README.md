@@ -21,7 +21,7 @@
 <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/functions.png" alt="functions" width="45%" />
 </div>
 
-1. 立即打开所有网站：通过菜单一键打开所有启用网站。
+1. 立即打开所有网站：通过菜单一键打开所有启用网站，同时计入当天记录，当天不会再被自动打开。
 2. 控制面板：单独打开网站、用开关即时启用/禁用。
    <div align="center">
       <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/panel.png" alt="panel" width="45%" />
@@ -49,7 +49,7 @@
 | --- | --- |
 | 打开控制面板 | 单独打开网站、即时启用/禁用 |
 | 管理网站 | 新增/编辑/删除/排序网站 |
-| 立即打开所有网站 | 手动打开全部启用网站 |
+| 立即打开所有网站 | 手动打开全部启用网站，并计入当天记录 |
 | 重置今日记录 | 清除当天记录，下次访问重新触发自动打开 |
 
 网站配置保存在 Tampermonkey 存储中，数据结构：
