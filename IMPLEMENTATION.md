@@ -84,7 +84,7 @@ flowchart TD
     Script --> Validate["表单校验<br/>collectSites() / validateSingleSite()"]
     Script --> RowPersist["单行持久化<br/>saveSingleSite() / deleteSiteByKey()"]
     Script --> Menu["菜单入口<br/>GM_registerMenuCommand()"]
-    Script --> Guard["防重复触发<br/>lastOpenDate / lastManualOpen / sessionStorage"]
+    Script --> Guard["防重复触发<br/>triggerTime / lastOpenDate / lastManualOpen / sessionStorage"]
 
     Storage --> Auto
     Storage --> Control
@@ -110,12 +110,13 @@ flowchart TD
    - `管理网站`
    - `立即打开所有网站`
    - `重置今日记录`
-5. 启动阶段读取 `lastManualOpen` 和 `sessionStorage.autoOpenChecked`。
-6. 如果当前标签页未检查过，且不是刚由脚本打开的新标签页，则调用 `checkAndAutoOpen()`。
-7. `checkAndAutoOpen()` 根据 `lastOpenDate` 判断今天是否已经自动打开过。
-8. 如果今天没有打开过，则调用 `openAllSites()` 尝试打开网站。
-9. 只有 `openAllSites()` 确实安排了打开标签页时，才写入今天日期。
-10. `openAllSites()` 读取启用状态的网站，并通过 `GM_openInTab()` 间隔打开。
+5. 启动阶段读取 `triggerTime`、`lastManualOpen` 和 `sessionStorage.autoOpenCheckedDate`。
+6. 如果还没到今天设定的触发时间，本次直接结束，不写任何标记。
+7. 否则，如果当前标签页还没有检查过今天，且不是刚由脚本打开的新标签页，则调用 `checkAndAutoOpen()`。
+8. `checkAndAutoOpen()` 根据 `lastOpenDate` 判断今天是否已经打开过。
+9. 如果今天没有打开过，则调用 `openAllSites()` 尝试打开网站。
+10. 只有 `openAllSites()` 确实安排了打开标签页时，才写入今天日期。
+11. `openAllSites()` 读取启用状态的网站，并通过 `GM_openInTab()` 间隔打开。
 
 对应启动逻辑：
 
@@ -123,9 +124,13 @@ flowchart TD
 const lastManualOpen = GM_getValue(STORAGE_KEY_LAST_MANUAL_OPEN, 0);
 const now = Date.now();
 const isRecentlyManuallyOpened = lastManualOpen && (now - lastManualOpen) < 10000;
+const checkedDate = sessionStorage.getItem(SESSION_KEY_AUTO_OPEN_CHECKED);
+const today = getTodayString();
 
-if (!sessionStorage.getItem('autoOpenChecked') && !isRecentlyManuallyOpened) {
-    sessionStorage.setItem('autoOpenChecked', 'true');
+if (!isTriggerTimeReached()) {
+    console.log(`[每日自动打开] 还没到设定的触发时间 ${getTriggerTime()}，本次不检查`);
+} else if (checkedDate !== today && !isRecentlyManuallyOpened) {
+    sessionStorage.setItem(SESSION_KEY_AUTO_OPEN_CHECKED, today);
     checkAndAutoOpen();
 }
 ```
@@ -144,7 +149,7 @@ if (!sessionStorage.getItem('autoOpenChecked') && !isRecentlyManuallyOpened) {
 
 ```js
 // @name         每日自动打开网站
-// @version      1.6
+// @version      1.0
 // @author       gcnanmu
 // @match        *://*/*
 // @grant        GM_getValue
@@ -178,6 +183,11 @@ if (!sessionStorage.getItem('autoOpenChecked') && !isRecentlyManuallyOpened) {
 const STORAGE_KEY_SITES = 'managedSites';
 const STORAGE_KEY_LAST_OPEN_DATE = 'lastOpenDate';
 const STORAGE_KEY_LAST_MANUAL_OPEN = 'lastManualOpen';
+const STORAGE_KEY_TRIGGER_TIME = 'triggerTime';
+// sessionStorage 标记当前标签页检查过哪一天，值为 YYYY-MM-DD。
+const SESSION_KEY_AUTO_OPEN_CHECKED = 'autoOpenCheckedDate';
+// 默认本地 08:00：默认值取早于它就不触发，避免熬夜到凌晨时误触发并占用当天机会。
+const DEFAULT_TRIGGER_TIME = '08:00';
 const PANEL_ID = 'auto-open-panel';
 const OVERLAY_ID = 'auto-open-overlay';
 const MANAGER_ID = 'auto-open-manager';
@@ -253,10 +263,22 @@ Tampermonkey 存储没有编译期类型约束。用户可能升级脚本、导�
 **涉及函数**
 
 - `getTodayString()`
+- `getTriggerTime()` / `setTriggerTime()`
+- `isTriggerTimeReached()`
 - `checkAndAutoOpen()`
 - `openAllSites()`
 
 **核心逻辑**
+
+触发时间是“闸门”，不是“闹钟”：
+
+```js
+const now = new Date();
+const [hour, minute] = getTriggerTime().split(':').map(Number);
+return now.getHours() * 60 + now.getMinutes() >= hour * 60 + minute;
+```
+
+脚本只在页面加载时运行，没有后台定时能力，所以做不到“到点自动打开”。它只能做到“早于这个时间不打开”。过了触发时间之后，当天第一次加载页面时才会打开。
 
 `checkAndAutoOpen()` 负责每日判断：
 
@@ -280,6 +302,15 @@ GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, Date.now());
 GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
 ```
 
+`getTodayString()` 取系统本地时区日期，不用 UTC：
+
+```js
+const now = new Date();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+return `${now.getFullYear()}-${month}-${day}`;
+```
+
 **为什么这样设计**
 
 只有在 `openAllSites()` 确实安排了打开标签页时，才写入 `lastOpenDate`。如果网站列表为空，或者没有任何启用网站，则不会算作今日已触发。
@@ -298,12 +329,18 @@ GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
 
 - 如果没有启用网站，会提示用户添加或启用网站。
 - 如果网站列表为空，自动检查只打印日志，不弹窗、不写入今日记录。
-- `getTodayString()` 使用 UTC 日期，东八区凌晨可能与本地日期存在差异，需要人工确认是否改成本地日期。
+- `getTodayString()` 使用系统本地时区日期，用户跨时区移动时会跟随系统时区变化。
+- `triggerTime` 存储值格式非法或越界时回退默认值，避免脏数据导致静默地永不触发。
+- 早于触发时间加载页面时不写 `sessionStorage` 标记，否则当天首次加载若发生在触发时间之前，标记会被用掉，过了触发时间再刷新反而不触发。
+- 手动“立即打开所有网站”不受触发时间限制，因为这是用户的显式操作。
 
 **验证方式**
 
 - 首次访问页面应触发自动打开。
 - 同一天再次访问页面不应重复打开。
+- 同一个标签页第二天刷新，应重新触发自动打开。
+- 把触发时间设为当前时间之前，加载页面应触发；设为当前时间之后，加载页面不应触发，且不写入 `lastOpenDate`。
+- 触发时间设为当前时间之后时首次加载页面，再把触发时间改到当前时间之前并刷新同一标签页，应能触发。
 - 禁用网站不应被 `openAllSites()` 打开。
 - 保存空网站列表后访问页面，应只打印“当前网站列表为空，不触发自动打开逻辑”，且不写入 `lastOpenDate`。
 - 点击“立即打开所有网站”后，当天访问新页面不应再自动打开。
@@ -314,17 +351,22 @@ GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
 
 | 状态 | 存储位置 | 作用 |
 | --- | --- | --- |
+| `triggerTime` | Tampermonkey 存储 | 早于该时间不检查，控制一天的起点 |
 | `lastOpenDate` | Tampermonkey 存储 | 控制今天是否已经打开过（手动或自动） |
 | `lastManualOpen` | Tampermonkey 存储 | 控制刚由脚本打开的新标签页不再重复触发 |
-| `autoOpenChecked` | `sessionStorage` | 控制当前标签页只检查一次 |
+| `autoOpenCheckedDate` | `sessionStorage` | 控制当前标签页检查过哪一天，值为日期字符串 |
 
 **核心逻辑**
 
 ```js
 const isRecentlyManuallyOpened = lastManualOpen && (now - lastManualOpen) < 10000;
+const checkedDate = sessionStorage.getItem(SESSION_KEY_AUTO_OPEN_CHECKED);
+const today = getTodayString();
 
-if (!sessionStorage.getItem('autoOpenChecked') && !isRecentlyManuallyOpened) {
-    sessionStorage.setItem('autoOpenChecked', 'true');
+if (!isTriggerTimeReached()) {
+    console.log(`[每日自动打开] 还没到设定的触发时间 ${getTriggerTime()}，本次不检查`);
+} else if (checkedDate !== today && !isRecentlyManuallyOpened) {
+    sessionStorage.setItem(SESSION_KEY_AUTO_OPEN_CHECKED, today);
     checkAndAutoOpen();
 }
 ```
@@ -333,6 +375,10 @@ if (!sessionStorage.getItem('autoOpenChecked') && !isRecentlyManuallyOpened) {
 
 脚本匹配所有网页，新打开的网站也会再次运行脚本。如果只用 `lastOpenDate`，虽然能防止当天重复打开，但新标签页仍会执行检查逻辑。组合使用 `sessionStorage` 和 `lastManualOpen` 可以减少无意义检查和连锁触发。
 
+`sessionStorage` 存日期而不是布尔值，是因为它按“标签页 + 源”隔离且跨刷新一直保留。如果只存 `'true'`，一个标签页会永久带着标记，第二天在原标签页刷新也不会触发每日检查，用户必须新开标签页才行。存日期后，同一天内刷新仍然跳过，跨天刷新会重新检查。
+
+触发时间判断必须排在写 `sessionStorage` 之前。如果先写标记再判断时间，当天首次加载若发生在触发时间之前，标记就被占用了，过了触发时间刷新同一个标签页也进不来，用户又得新开标签页。
+
 **重置逻辑**
 
 当前 `重置今日记录` 会清理三个状态：
@@ -340,10 +386,10 @@ if (!sessionStorage.getItem('autoOpenChecked') && !isRecentlyManuallyOpened) {
 ```js
 GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, '');
 GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, 0);
-sessionStorage.removeItem('autoOpenChecked');
+sessionStorage.removeItem(SESSION_KEY_AUTO_OPEN_CHECKED);
 ```
 
-这是因为只清 `lastOpenDate` 不够。同一标签页里 `autoOpenChecked` 仍存在时，访问新页面仍不会进入每日检查。
+这是因为只清 `lastOpenDate` 不够。同一标签页里 sessionStorage 标记仍存在时，访问新页面仍不会进入每日检查。
 
 ### 4.6 弹窗基础模块
 
@@ -374,6 +420,7 @@ sessionStorage.removeItem('autoOpenChecked');
 **涉及函数**
 
 - `createControlPanel()`
+- `createTriggerTimeSetting()`
 - `updateSiteEnabled(targetIndex, enabled)`
 - `createToggleSwitch(checked, onChange)`
 
@@ -383,6 +430,7 @@ sessionStorage.removeItem('autoOpenChecked');
 
 - 单独打开某个启用网站。
 - 使用滑动开关立即启用/禁用某个网站。
+- 设置每日触发时间。
 - 手动打开所有启用网站。
 - 进入管理网站界面。
 
@@ -399,13 +447,28 @@ const toggleSwitch = createToggleSwitch(site.enabled, (nextEnabled) => {
 });
 ```
 
+每日触发时间用原生 `<input type="time">`，同样即时保存：
+
+```js
+input.onchange = () => {
+    // 输入框被清空时按默认值处理；切片兼容少数返回 HH:MM:SS 的浏览器。
+    // 写完再回读一次，保证输入框显示的就是存储里真正生效的值。
+    setTriggerTime((input.value || DEFAULT_TRIGGER_TIME).slice(0, 5));
+    input.value = getTriggerTime();
+    renderHint();
+};
+```
+
 **为什么这样设计**
 
 控制面板属于快捷操作场景，用户点击开关后通常希望立即生效。因此这里不等待“保存配置”，而是马上写入 Tampermonkey 存储并重绘面板。
 
+触发时间设置放在面板底部，是为了不让它挤占高频的网站列表，同时复用同一套“改完即生效”的交互，不需要额外的保存按钮。
+
 **边界情况**
 
-禁用网站点击打开时，会提示先启用，不会调用 `GM_openInTab()`。
+- 禁用网站点击打开时，会提示先启用，不会调用 `GM_openInTab()`。
+- 触发时间输入框被清空时按默认值处理，避免存一个空串导致 `getTriggerTime()` 之外的地方读到非法值。
 
 ### 4.8 UI 组件模块
 
@@ -656,7 +719,7 @@ GM_registerMenuCommand('立即打开所有网站', () => {
 GM_registerMenuCommand('重置今日记录', () => {
     GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, '');
     GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, 0);
-    sessionStorage.removeItem('autoOpenChecked');
+    sessionStorage.removeItem(SESSION_KEY_AUTO_OPEN_CHECKED);
     alert('今日记录已重置，下次访问或刷新页面会再次触发自动打开。');
 });
 ```
@@ -743,6 +806,10 @@ node -e "new Function(require('fs').readFileSync('script/auto-open-sites.user.js
 14. 保存空网站列表，访问新页面时确认控制台打印“当前网站列表为空，不触发自动打开逻辑”，且不会写入今日记录。
 15. 点击“重置今日记录”，访问新页面或刷新页面，确认会重新触发自动打开检查。
 16. 在包含 iframe 的页面点击“立即打开所有网站”，确认只打开一次（每个启用网站一个标签页），不再随 iframe 数量翻倍。
+17. 保持一个标签页不关，第二天在原标签页刷新，确认会重新触发自动打开。
+18. 在控制面板把触发时间设为当前时间之后，加载页面确认不触发，且控制台打印“还没到设定的触发时间”。
+19. 再把它设为当前时间之前，刷新同一标签页，确认能触发。
+20. 凌晨 0 点到触发时间之间加载页面，确认不会误触发，当天的机会仍然保留。
 
 ### 5.6 已处理边界场景
 
@@ -758,11 +825,13 @@ node -e "new Function(require('fs').readFileSync('script/auto-open-sites.user.js
 - 拖拽排序在 `dragend` 后立即持久化，只处理已保存行。
 - 保存空网站列表后保持为空，不回退默认网站。
 - 空网站列表不会触发自动打开，也不会写入今日记录。
-- 重置今日记录时同时清理 `lastOpenDate`、`lastManualOpen` 和 `autoOpenChecked`。
+- 重置今日记录时同时清理 `lastOpenDate`、`lastManualOpen` 和 sessionStorage 当日标记。
+- 日期按系统本地时区判定，不再受 UTC 偏移影响。
+- 早于每日触发时间加载页面时不触发，也不占用当天机会。
+- `triggerTime` 值非法时回退默认时间，不会静默失联。
 
 ### 5.7 需要人工确认的事项
 
-- 日期判断是否应从 UTC 改成本地日期。
 - 是否需要对 URL 使用 `new URL()` 做更严格的保存校验。
 - 是否需要导入/导出配置。
 - `static/` 目录当前为空，其用途需要确认。
@@ -804,7 +873,7 @@ node -e "new Function(require('fs').readFileSync('script/auto-open-sites.user.js
 
 **问题**
 
-早期只清理 `lastOpenDate`，但当前标签页中的 `sessionStorage.autoOpenChecked` 仍存在，导致访问新页面不再执行检查。
+早期只清理 `lastOpenDate`，但当前标签页中的 sessionStorage 标记仍存在，导致访问新页面不再执行检查。
 
 **解决**
 
@@ -813,7 +882,7 @@ node -e "new Function(require('fs').readFileSync('script/auto-open-sites.user.js
 ```js
 GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, '');
 GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, 0);
-sessionStorage.removeItem('autoOpenChecked');
+sessionStorage.removeItem(SESSION_KEY_AUTO_OPEN_CHECKED);
 ```
 
 ### 6.5 脚本匹配所有网页容易重复触发
@@ -828,7 +897,7 @@ sessionStorage.removeItem('autoOpenChecked');
 
 - `lastOpenDate`
 - `lastManualOpen`
-- `sessionStorage.autoOpenChecked`
+- `sessionStorage.autoOpenCheckedDate`
 
 从日期、短时间窗口、当前标签页三个层面降低重复触发风险。
 
@@ -900,6 +969,67 @@ GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
 
 两个提前返回（列表为空、没有启用网站）仍在写入之前，所以“空列表不算今日已触发”的语义不变。
 
+### 6.11 同一标签页跨天刷新不会触发
+
+**问题**
+
+启动防重复用的是 `sessionStorage.autoOpenChecked`，值是布尔标记。`sessionStorage` 按“标签页 + 源”隔离，且跨刷新、跨同源跳转一直保留，只在关闭标签页时清除。
+
+结果是：一个标签页只要运行过一次脚本，就永久带着这个标记。第二天在同一个残留标签页里刷新或同源跳转，第 1 道判断直接短路，连日期都不看，用户必须新开标签页才会触发每日检查。
+
+**解决**
+
+sessionStorage 改存当天日期，判断条件从“是否存在”改成“是否等于今天”：
+
+```js
+const checkedDate = sessionStorage.getItem(SESSION_KEY_AUTO_OPEN_CHECKED);
+
+if (checkedDate !== getTodayString() && !isRecentlyManuallyOpened) {
+    sessionStorage.setItem(SESSION_KEY_AUTO_OPEN_CHECKED, getTodayString());
+    checkAndAutoOpen();
+}
+```
+
+同一天内刷新仍然跳过，跨天刷新会重新检查。key 同时改名为 `autoOpenCheckedDate`，避免和旧版本残留的布尔值混淆（旧值只会在内存里留到标签页关闭，不影响新逻辑）。
+
+### 6.12 日期按 UTC 判定导致早上 8 点前不触发
+
+**问题**
+
+`getTodayString()` 早期用 `new Date().toISOString().split('T')[0]`，得到的是 UTC 日期。东八区下 UTC 日期要等本地 08:00 才翻页，所以本地时间 0 点到 8 点之间访问页面，脚本仍认为“今天是昨天”，直接跳过自动打开。
+
+**解决**
+
+改用 `getFullYear` / `getMonth` / `getDate` 拼接，取系统本地时区日期，也就是用户当前所在时区。用户跨时区移动时日期跟随系统时区变化，属预期行为。
+
+### 6.13 凌晨触发没有意义且会占用当天机会
+
+**问题**
+
+两件事：
+
+- 部分网站的每日签到不是本地 0 点刷新，0 点打开等于白开。
+- 用户熬夜到凌晨时，过了 0 点加载页面就会触发，而当天的机会只有一次，第二天白天反而不会打开了。
+
+**解决**
+
+新增全局配置 `triggerTime`（默认 `08:00`，可在控制面板修改），早于该时间不做任何检查：
+
+```js
+if (!isTriggerTimeReached()) {
+    console.log(`[每日自动打开] 还没到设定的触发时间 ${getTriggerTime()}，本次不检查`);
+} else if (checkedDate !== today && !isRecentlyManuallyOpened) {
+    sessionStorage.setItem(SESSION_KEY_AUTO_OPEN_CHECKED, today);
+    checkAndAutoOpen();
+}
+```
+
+边界处理：
+
+- 判断必须排在写 `sessionStorage` 之前，否则早于触发时间的首次加载会把当天标记用掉。
+- 手动“立即打开所有网站”不受限制，那是用户的显式操作。
+- 该设置是一道闸门而不是闹钟：脚本只在页面加载时运行，没有后台定时能力，做不到“到点自动打开”，只能是“过了这个时间后，当天第一次加载页面时才打开”。
+
 ## 7. 总结与后续优化
 
 当前项目是一个轻量 Tampermonkey 自动打开网站脚本。实现上保持单文件运行、无构建依赖，通过原生 DOM 实现控制面板和管理面板，通过 Tampermonkey 存储保存网站配置。
@@ -910,9 +1040,11 @@ GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
 - 仅在顶层页面运行（`@noframes`），避免 iframe 重复触发。
 - 手动打开所有启用网站，且计入今日记录，当天不会再被自动打开。
 - 控制面板快速打开和即时启用/禁用。
+- 控制面板设置每日触发时间，默认 08:00，早于该时间不触发。
 - 管理面板新增、修改、删除、启用/禁用、拖拽排序。
 - 每行独立保存与删除即时持久化，拖拽排序即时持久化，底部“保存配置”批量提交。
-- 防重复触发。
+- 防重复触发，同一标签页同一天内不重复检查、跨天刷新会重新检查。
+- 日期按系统本地时区判定。
 - 重置今日记录。
 - 删除二次确认。
 - 重复名称校验。
@@ -922,7 +1054,6 @@ GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, getTodayString());
 
 后续建议：
 
-- 将 UTC 日期判断改成本地日期，需要人工确认。
 - 增加搜索或筛选。
 - 增加导入/导出配置。
 - 增加更严格的 URL 合法性校验。

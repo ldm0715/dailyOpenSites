@@ -32,8 +32,11 @@
     const STORAGE_KEY_SITES = 'managedSites';
     const STORAGE_KEY_LAST_OPEN_DATE = 'lastOpenDate';
     const STORAGE_KEY_LAST_MANUAL_OPEN = 'lastManualOpen';
+    const STORAGE_KEY_TRIGGER_TIME = 'triggerTime';
     // sessionStorage 标记当前标签页检查过哪一天，值为 YYYY-MM-DD。
     const SESSION_KEY_AUTO_OPEN_CHECKED = 'autoOpenCheckedDate';
+    // 默认本地 08:00：默认值取早于它就不触发，避免熬夜到凌晨时误触发并占用当天机会。
+    const DEFAULT_TRIGGER_TIME = '08:00';
     const PANEL_ID = 'auto-open-panel';
     const OVERLAY_ID = 'auto-open-overlay';
     const MANAGER_ID = 'auto-open-manager';
@@ -111,6 +114,50 @@
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         return `${now.getFullYear()}-${month}-${day}`;
+    }
+
+    /**
+     * 读取每日触发时间，格式 HH:MM。
+     *
+     * 存储值可能被手动改坏或来自旧版本，格式不合法时回退默认值。
+     * 否则一个脏值会让脚本静默地永不触发，很难排查。
+     *
+     * @returns {string} HH:MM
+     */
+    function getTriggerTime() {
+        const raw = GM_getValue(STORAGE_KEY_TRIGGER_TIME, DEFAULT_TRIGGER_TIME);
+        if (typeof raw !== 'string' || !/^\d{2}:\d{2}$/.test(raw)) {
+            return DEFAULT_TRIGGER_TIME;
+        }
+
+        const [hour, minute] = raw.split(':').map(Number);
+        if (hour > 23 || minute > 59) {
+            return DEFAULT_TRIGGER_TIME;
+        }
+
+        return raw;
+    }
+
+    function setTriggerTime(value) {
+        GM_setValue(STORAGE_KEY_TRIGGER_TIME, value);
+    }
+
+    /**
+     * 判断当前是否已经到了今天的触发时间。
+     *
+     * 脚本只在页面加载时运行，没有后台定时能力，所以这里是一道“闸门”而不是“闹钟”：
+     * 早于触发时间加载页面就什么都不做，等用户下次加载页面再判断。
+     *
+     * 这样能解决两个问题：
+     * - 网站签到不是本地 0 点刷新，0 点打开没有意义。
+     * - 用户熬夜到凌晨时，过了 0 点就会误触发并占用当天的机会。
+     *
+     * @returns {boolean}
+     */
+    function isTriggerTimeReached() {
+        const now = new Date();
+        const [hour, minute] = getTriggerTime().split(':').map(Number);
+        return now.getHours() * 60 + now.getMinutes() >= hour * 60 + minute;
     }
 
     /**
@@ -431,6 +478,59 @@
     }
 
     /**
+     * 创建“每日触发时间”设置行。
+     *
+     * 放在控制面板底部：控制面板是日常入口，设置改完即时保存，
+     * 和网站开关“切换即保存”的交互保持一致，不需要额外的保存按钮。
+     *
+     * @returns {HTMLDivElement}
+     */
+    function createTriggerTimeSetting() {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'margin: 12px 0 4px; padding-top: 12px; border-top: 1px solid #e5e5e5;';
+
+        const row = document.createElement('div');
+        row.style.cssText = 'display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center;';
+
+        const label = document.createElement('label');
+        label.textContent = '每日触发时间（本地时间）';
+        label.style.cssText = 'font-size: 13px; color: #555;';
+
+        const hint = document.createElement('div');
+        hint.style.cssText = 'margin-top: 6px; font-size: 12px; color: #888; line-height: 1.5;';
+        const renderHint = () => {
+            hint.textContent = `早于 ${getTriggerTime()} 不自动打开。脚本只在页面加载时运行，所以过了这个时间后，当天第一次加载页面才会打开，不会到点自动打开。`;
+        };
+
+        const input = document.createElement('input');
+        input.type = 'time';
+        input.value = getTriggerTime();
+        input.style.cssText = `
+            padding: 6px 8px;
+            border: 1px solid #cfcfcf;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            background: #fff;
+            color: #222;
+        `;
+        input.onchange = () => {
+            // 输入框被清空时按默认值处理；切片兼容少数返回 HH:MM:SS 的浏览器。
+            // 写完再回读一次，保证输入框显示的就是存储里真正生效的值。
+            setTriggerTime((input.value || DEFAULT_TRIGGER_TIME).slice(0, 5));
+            input.value = getTriggerTime();
+            renderHint();
+        };
+
+        renderHint();
+        row.appendChild(label);
+        row.appendChild(input);
+        wrapper.appendChild(row);
+        wrapper.appendChild(hint);
+        return wrapper;
+    }
+
+    /**
      * 创建快速打开控制面板。
      *
      * 面板职责：
@@ -438,6 +538,7 @@
      * - 启用网站可以直接点击打开。
      * - 禁用网站仍展示，但点击打开时提示先启用。
      * - 每个网站右侧提供滑动开关，切换后立即保存。
+     * - 底部提供每日触发时间设置。
      * - 提供“打开所有网站”“管理网站”“关闭”入口。
      *
      * 这里没有过滤禁用网站，是因为用户需要从控制面板重新启用它们。
@@ -483,6 +584,8 @@
             row.appendChild(toggleSwitch);
             panel.appendChild(row);
         });
+
+        panel.appendChild(createTriggerTimeSetting());
 
         panel.appendChild(createActionButton('打开所有网站', '#2196f3', '#0b7dda', () => {
             openAllSites();
@@ -1251,14 +1354,16 @@
     /**
      * 启动阶段的防重复逻辑。
      *
-     * 需要同时考虑两种重复来源：
-     * 1. 同一个标签页里脚本重复运行：用 sessionStorage 记录今天是否检查过。
-     * 2. openAllSites() 打开的新标签页也会运行脚本：用 lastManualOpen 的 10 秒窗口阻止。
+     * 需要同时考虑三种跳过来源：
+     * 1. 还没到今天设定的触发时间：什么都不做，等下次加载页面再判断。
+     * 2. 同一个标签页里脚本重复运行：用 sessionStorage 记录今天是否检查过。
+     * 3. openAllSites() 打开的新标签页也会运行脚本：用 lastManualOpen 的 10 秒窗口阻止。
      *
      * sessionStorage 里存的是日期而不是布尔值，这样同一个标签页跨天刷新时也能重新检查。
      * 如果只存 'true'，标签页会永久带着标记，跨天刷新也不会触发。
      *
-     * 如果两个条件都允许，才执行 checkAndAutoOpen()。
+     * 触发时间判断必须放在写 sessionStorage 之前：否则当天首次加载如果发生在触发时间之前，
+     * 标记就被用掉了，之后过了触发时间再刷新同一个标签页也不会触发。
      */
     const lastManualOpen = GM_getValue(STORAGE_KEY_LAST_MANUAL_OPEN, 0);
     const now = Date.now();
@@ -1266,7 +1371,9 @@
     const checkedDate = sessionStorage.getItem(SESSION_KEY_AUTO_OPEN_CHECKED);
     const today = getTodayString();
 
-    if (checkedDate !== today && !isRecentlyManuallyOpened) {
+    if (!isTriggerTimeReached()) {
+        console.log(`[每日自动打开] 还没到设定的触发时间 ${getTriggerTime()}，本次不检查`);
+    } else if (checkedDate !== today && !isRecentlyManuallyOpened) {
         sessionStorage.setItem(SESSION_KEY_AUTO_OPEN_CHECKED, today);
         checkAndAutoOpen();
     }
