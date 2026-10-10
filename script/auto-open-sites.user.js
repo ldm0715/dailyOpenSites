@@ -32,6 +32,8 @@
     const STORAGE_KEY_SITES = 'managedSites';
     const STORAGE_KEY_LAST_OPEN_DATE = 'lastOpenDate';
     const STORAGE_KEY_LAST_MANUAL_OPEN = 'lastManualOpen';
+    // sessionStorage 标记当前标签页检查过哪一天，值为 YYYY-MM-DD。
+    const SESSION_KEY_AUTO_OPEN_CHECKED = 'autoOpenCheckedDate';
     const PANEL_ID = 'auto-open-panel';
     const OVERLAY_ID = 'auto-open-overlay';
     const MANAGER_ID = 'auto-open-manager';
@@ -1241,8 +1243,8 @@
         GM_setValue(STORAGE_KEY_LAST_OPEN_DATE, '');
         // lastManualOpen 控制“最近是否刚由脚本打开过网站”，重置时也清掉，避免 10 秒窗口继续跳过检查。
         GM_setValue(STORAGE_KEY_LAST_MANUAL_OPEN, 0);
-        // sessionStorage 标记当前标签页已经检查过；不清它，同一标签页访问新页面仍不会再次触发。
-        sessionStorage.removeItem('autoOpenChecked');
+        // sessionStorage 记录当前标签页检查过哪一天；不清它，同一标签页当天刷新仍不会再次触发。
+        sessionStorage.removeItem(SESSION_KEY_AUTO_OPEN_CHECKED);
         alert('今日记录已重置，下次访问或刷新页面会再次触发自动打开。');
     });
 
@@ -1250,17 +1252,22 @@
      * 启动阶段的防重复逻辑。
      *
      * 需要同时考虑两种重复来源：
-     * 1. 同一个标签页里脚本重复运行：用 sessionStorage.autoOpenChecked 阻止。
+     * 1. 同一个标签页里脚本重复运行：用 sessionStorage 记录今天是否检查过。
      * 2. openAllSites() 打开的新标签页也会运行脚本：用 lastManualOpen 的 10 秒窗口阻止。
+     *
+     * sessionStorage 里存的是日期而不是布尔值，这样同一个标签页跨天刷新时也能重新检查。
+     * 如果只存 'true'，标签页会永久带着标记，跨天刷新也不会触发。
      *
      * 如果两个条件都允许，才执行 checkAndAutoOpen()。
      */
     const lastManualOpen = GM_getValue(STORAGE_KEY_LAST_MANUAL_OPEN, 0);
     const now = Date.now();
     const isRecentlyManuallyOpened = lastManualOpen && (now - lastManualOpen) < 10000;
+    const checkedDate = sessionStorage.getItem(SESSION_KEY_AUTO_OPEN_CHECKED);
+    const today = getTodayString();
 
-    if (!sessionStorage.getItem('autoOpenChecked') && !isRecentlyManuallyOpened) {
-        sessionStorage.setItem('autoOpenChecked', 'true');
+    if (checkedDate !== today && !isRecentlyManuallyOpened) {
+        sessionStorage.setItem(SESSION_KEY_AUTO_OPEN_CHECKED, today);
         checkAndAutoOpen();
     }
 })();
