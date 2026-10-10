@@ -1,4 +1,4 @@
-# 每日自动打开网站
+# dailyOpenSites
 <div align="center">
 <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/icon.png" alt="icon" width="20%" />
 </div>
@@ -38,7 +38,7 @@
 1. 安装插件：扩展 [Tampermonkey](https://www.tampermonkey.net/)
 2. 安装脚本（二选一）：
    - 在 Tampermonkey 中新建脚本，把 [`script/auto-open-sites.user.js`](script/auto-open-sites.user.js) 的内容粘贴进去并保存
-   - 访问[每日自动打开网站](https://greasyfork.org/zh-CN/scripts/581225-dailyopensites)，点击安装
+   - 访问 [dailyOpenSites](https://greasyfork.org/zh-CN/scripts/581225-dailyopensites)，点击安装
 
 ## 使用
 

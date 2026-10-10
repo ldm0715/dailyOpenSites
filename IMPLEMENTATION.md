@@ -1,6 +1,6 @@
 # 项目实现说明文档
 
-本文档基于当前项目目录和源码编写，记录 `每日自动打开网站` Tampermonkey 脚本的实现方式、模块职责、关键技术选择、边界处理和验证方式。
+本文档基于当前项目目录和源码编写，记录 `dailyOpenSites` Tampermonkey 脚本的实现方式、模块职责、关键技术选择、边界处理和验证方式。
 
 当前主源码文件为：
 
@@ -148,8 +148,8 @@ if (!isTriggerTimeReached()) {
 `script/auto-open-sites.user.js` 顶部：
 
 ```js
-// @name         每日自动打开网站
-// @version      1.0
+// @name         dailyOpenSites
+// @version      1.2
 // @author       gcnanmu
 // @match        *://*/*
 // @grant        GM_getValue
