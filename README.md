@@ -1,6 +1,6 @@
 # dailyOpenSites
 <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/icon.png" alt="icon" width="20%" />
+<img src="https://raw.githubusercontent.com/ldm0715/dailyOpenSites/main/static/icon.png" alt="icon" width="20%" />
 </div>
 
 <div align="center">
@@ -18,17 +18,17 @@
 主要功能（自动）：每天首次访问网页时自动打开启用的网站（按本地时区，默认 08:00 之后才触发，当天只触发一次，可重置）。
 
 <div align="center">
-<img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/functions.png" alt="functions" width="45%" />
+<img src="https://raw.githubusercontent.com/ldm0715/dailyOpenSites/main/static/functions.png" alt="functions" width="45%" />
 </div>
 
 1. 立即打开所有网站：通过菜单一键打开所有启用网站，同时计入当天记录，当天不会再被自动打开。
 2. 控制面板：单独打开网站、用开关即时启用/禁用。
    <div align="center">
-      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/panel.png" alt="panel" width="45%" />
+      <img src="https://raw.githubusercontent.com/ldm0715/dailyOpenSites/main/static/panel.png" alt="panel" width="45%" />
    </div>
 3. 管理面板：新增、编辑、删除网站，拖拽排序。
    <div align="center">
-      <img src="https://github.com/ldm0715/dailyOpenSites/blob/main/static/management.png" alt="management" width="45%" />
+      <img src="https://raw.githubusercontent.com/ldm0715/dailyOpenSites/main/static/management.png" alt="management" width="45%" />
    </div>
 4. 自定义每日触发时间：在控制面板设置几点之后才触发，默认 08:00。适合网站签到时间晚于 0 点，或者熬夜到凌晨时不想被误触发、把当天机会用掉的情况。
 5. 重置今日记录：可重置当天记录，重新触发自动打开。
@@ -37,7 +37,7 @@
 
 1. 安装插件：扩展 [Tampermonkey](https://www.tampermonkey.net/)
 2. 安装脚本（二选一）：
-   - 在 Tampermonkey 中新建脚本，把 [`script/auto-open-sites.user.js`](script/auto-open-sites.user.js) 的内容粘贴进去并保存
+   - 在 Tampermonkey 中新建脚本，把 [`script/auto-open-sites.user.js`](https://github.com/ldm0715/dailyOpenSites/blob/main/script/auto-open-sites.user.js) 的内容粘贴进去并保存
    - 访问 [dailyOpenSites](https://greasyfork.org/zh-CN/scripts/581225-dailyopensites)，点击安装
 
 ## 使用
@@ -83,8 +83,8 @@
 
 ## 开发
 
-纯前端单文件脚本，无需构建或依赖安装。直接修改仓库中的`script\auto-open-sites.user.js`即可，更详细的模块设计与实现说明见 [IMPLEMENTATION.md](IMPLEMENTATION.md)。本地测试使用的 Tampermonkey 版本为v5.5.0
+纯前端单文件脚本，无需构建或依赖安装。直接修改仓库中的`script\auto-open-sites.user.js`即可，更详细的模块设计与实现说明见 [IMPLEMENTATION.md](https://github.com/ldm0715/dailyOpenSites/blob/main/IMPLEMENTATION.md)。本地测试使用的 Tampermonkey 版本为v5.5.0
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](https://github.com/ldm0715/dailyOpenSites/blob/main/LICENSE)
