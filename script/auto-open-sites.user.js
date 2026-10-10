@@ -94,16 +94,21 @@
     }
 
     /**
-     * 获取当天日期字符串。
+     * 获取当天日期字符串，格式 YYYY-MM-DD。
      *
-     * 当前实现使用 toISOString()，生成的是 UTC 日期，不是本地时区日期。
-     * 这意味着在东八区凌晨 0 点到 8 点之间，UTC 日期可能仍是前一天。
-     * 如果要严格按本地日期判断，需要改成本地年月日拼接。
+     * 用 getFullYear/getMonth/getDate 取系统本地时区日期，也就是用户当前所在时区。
+     * 不用 toISOString()，因为它返回 UTC 日期：东八区下 UTC 日期要等到本地 08:00 才翻页，
+     * 会让脚本在早上 8 点前仍认为“今天是昨天”，从而跳过自动打开。
+     *
+     * 用户跨时区移动时日期会跟随系统时区变化，属预期行为。
      *
      * @returns {string} YYYY-MM-DD
      */
     function getTodayString() {
-        return new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${now.getFullYear()}-${month}-${day}`;
     }
 
     /**
